@@ -27,6 +27,13 @@ dayjs().format('mm')
 app.post('/participants', async (req, res)=> {
     const userName = req.body
 
+    const validation = nameSchamer.validate(userName, { abortEarly: true} )
+
+    if (validation.error){
+        res.status(422).send(validation.error.details)
+        return
+    }
+
     try {
         const sameName = await db.collection('participantes').find().toArray()
         for(let element of sameName){
@@ -39,12 +46,6 @@ app.post('/participants', async (req, res)=> {
         res.status(422).send(error)
     }
 
-    const validation = nameSchamer.validate(userName, { abortEarly: true} )
-
-    if (validation.error){
-        res.status(422).send(validation.error.details)
-        return
-    }
 
     try {
         await db.collection('participantes').insertOne({name: userName.name, lastStatus: Date.now()}), db.collection('mensagens').insertOne({from: userName.name , to: 'Todos', text: 'entra na sala...', type: 'status', time: `${(dayjs().hour() < 10 ? '0' + dayjs().hour() : dayjs().hour() )}:${(dayjs().minute() < 10 ? '0' + dayjs().minute() : dayjs().minute() )}:${(dayjs().second() < 10 ? '0' + dayjs().second() : dayjs().second() )}`})
@@ -61,6 +62,56 @@ app.get('/participants', async (req, res) =>{
     } catch (error) {
         res.status(422).send(error)
     }
+})
+
+const messageSchamer = joi.object({
+    to: joi.string().required(),
+    text: joi.string().required(),
+    type: joi.any().valid('message', 'private_message').required()
+})
+
+app.post('/messages', async (req, res) => {
+    const messageReq = req.body
+    const userr = req.headers.user
+    
+    
+
+    if(!userr){
+        res.status(422).send('Nome de usuário inválido')
+    }
+
+    const validation = messageSchamer.validate(messageReq, { abortEarly: false} )
+
+    if (validation.error){
+        res.status(422).send(validation.error.details)
+        return
+    }
+
+   
+
+    try {
+        const sameName = await db.collection('participantes').findOne({name: userr})
+        if(!sameName){
+            res.send('Esse usuário não existe').status(404)
+        }
+    } catch (error) {
+        res.send(error).status(422)
+    }
+
+    try {
+        await db.collection('mensagens').insertOne({
+            from: userr ,
+            to: messageReq.to,
+            text: messageReq.text,
+            type: messageReq.type,
+            time: `${(dayjs().hour() < 10 ? '0' + dayjs().hour() : dayjs().hour() )}:${(dayjs().minute() < 10 ? '0' + dayjs().minute() : dayjs().minute() )}:${(dayjs().second() < 10 ? '0' + dayjs().second() : dayjs().second() )}`
+        })
+        res.sendStatus(201)
+    } catch (error) {
+        res.status(422).send(error.message)
+    }
+
+
 })
 
 app.listen(process.env.PORT, ()=> {
