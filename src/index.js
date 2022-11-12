@@ -54,6 +54,15 @@ app.post('/participants', async (req, res)=> {
     }
 })
 
+app.get('/participants', async (req, res) =>{
+    try {
+        const participantes = await db.collection('participantes').find().toArray()
+        res.send(participantes)
+    } catch (error) {
+        res.status(422).send(error)
+    }
+})
+
 app.listen(process.env.PORT, ()=> {
     console.log('rodando bipbop')
 })
