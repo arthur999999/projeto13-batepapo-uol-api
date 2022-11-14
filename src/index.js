@@ -137,6 +137,27 @@ app.get('/messages', async (req, res)=> {
     }
 })
 
+app.post('/status', async (req, res)=> {
+    const userr = req.headers.user
+    if(!userr){
+        res.sendStatus(404)
+        return
+    }
+    try {
+        const sameName = await db.collection('participantes').findOne({name: userr})
+        if(!sameName){
+            res.sendStatus(404)
+            return
+        }
+        await db.collection('participantes').update(sameName, {$set :{ lastStatus: Date.now() }})
+        res.sendStatus(200)
+    } catch (error) {
+        res.status(422).send(error.message)
+    }
+    
+    
+})
+
 app.listen(5000, ()=> {
     console.log('rodando bipbop')
 })
