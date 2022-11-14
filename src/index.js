@@ -1,5 +1,5 @@
 import express from "express";
-import { MongoClient} from 'mongodb';
+import { MongoClient, ObjectId} from 'mongodb';
 import cors from "cors";
 import dotenv from 'dotenv';
 import joi from 'joi';
@@ -154,9 +154,25 @@ app.post('/status', async (req, res)=> {
     } catch (error) {
         res.status(422).send(error.message)
     }
-    
-    
+      
 })
+
+
+
+async function  removeAFK () {
+    try {
+        const listParti = await db.collection('participantes').find().toArray()
+        listParti.forEach(async m => {
+           if( Date.now() - m.lastStatus > 10000){
+                await db.collection('participantes').deleteOne(m)
+           }
+        });
+    } catch (error) {
+        console.log(error)
+    }
+}
+
+setInterval(removeAFK, 15000)
 
 app.listen(5000, ()=> {
     console.log('rodando bipbop')
