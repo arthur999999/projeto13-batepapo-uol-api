@@ -22,7 +22,7 @@ const nameSchamer = joi.object({
     name: joi.string().required()
 })
 
-dayjs().format('mm')
+
 
 app.post('/participants', async (req, res)=> {
     const userName = req.body
@@ -78,6 +78,7 @@ app.post('/messages', async (req, res) => {
 
     if(!userr){
         res.status(422).send('Nome de usuário inválido')
+        return
     }
 
     const validation = messageSchamer.validate(messageReq, { abortEarly: false} )
@@ -92,11 +93,14 @@ app.post('/messages', async (req, res) => {
     try {
         const sameName = await db.collection('participantes').findOne({name: userr})
         if(!sameName){
-            res.send('Esse usuário não existe').status(404)
+            res.status(404).send('Esse usuário não existe')
+            return
         }
     } catch (error) {
         res.send(error).status(422)
     }
+
+    
 
     try {
         await db.collection('mensagens').insertOne({
@@ -114,6 +118,25 @@ app.post('/messages', async (req, res) => {
 
 })
 
-app.listen(process.env.PORT, ()=> {
+app.get('/messages', async (req, res)=> {
+    const {limit} = req.query
+    const userr = req.headers.user
+
+    try {
+        const listMenssages = await db.collection('mensagens').find().toArray()
+        const listFilter = listMenssages.filter((m)=> m.from == userr || m.to == "Todos" || m.to == userr)
+        if(listFilter.length > limit){
+            let x = listFilter.length - limit
+            listFilter.splice(0, x)
+        }
+        res.send(listFilter)
+        
+
+    } catch (error) {
+        res.status(422).send(error.message)
+    }
+})
+
+app.listen(5000, ()=> {
     console.log('rodando bipbop')
 })
